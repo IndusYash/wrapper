@@ -6,9 +6,9 @@ interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg'
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
-  message = 'Loading...', 
-  size = 'md' 
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
+  message = 'Loading...',
+  size = 'md'
 }) => {
   const sizeClasses = {
     sm: 'w-4 h-4',
@@ -17,10 +17,15 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
       <div className="text-center">
-        <Loader2 className={`${sizeClasses[size]} animate-spin mx-auto mb-4 text-blue-500`} />
-        <p className="text-gray-600">{message}</p>
+        <div className="flex flex-col items-center mb-4">
+          <span className="text-3xl mb-1">✈️</span>
+          <Loader2 className={`${sizeClasses[size]} animate-spin mx-auto text-blue-500`} />
+        </div>
+        <p className="text-blue-600 font-semibold">
+          {message || 'Loading...'} <span className="ml-1">Aviation Bay</span>
+        </p>
       </div>
     </div>
   )

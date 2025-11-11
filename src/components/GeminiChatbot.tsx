@@ -1,7 +1,6 @@
-// components/GeminiChatbot.tsx
 import React, { useState, useEffect, useRef } from 'react'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { Send, Trash2, User } from 'lucide-react'
+import { Send, Trash2, User, Plane } from 'lucide-react'
 
 interface Message {
   role: 'user' | 'model'
@@ -19,93 +18,94 @@ const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ className = '' }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [model, setModel] = useState<any>(null)
-  
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null) // Fixed: Changed to HTMLInputElement
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  // Simple initialization
   useEffect(() => {
     const initializeGemini = async () => {
       try {
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY
-        if (!apiKey) {
-          throw new Error('API key not found')
-        }
-
+        if (!apiKey) throw new Error('API key not found')
         const genAI = new GoogleGenerativeAI(apiKey)
-        const generativeModel = genAI.getGenerativeModel({ 
-          model: "gemini-1.5-flash",
+        const generativeModel = genAI.getGenerativeModel({
+          model: "gemini-2.5-flash",
           generationConfig: {
-            maxOutputTokens: 150,
+            maxOutputTokens: 512,
             temperature: 0.7
           }
         })
-
         setModel(generativeModel)
-        console.log('✅ Gemini initialized')
-
       } catch (err) {
-        console.error('❌ Failed to initialize:', err)
         setError('Failed to initialize AI')
       }
     }
-
     initializeGemini()
   }, [])
 
-  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Simple send message function with short response prompt
   const sendMessage = async (messageText: string) => {
-    if (!messageText.trim() || !model || isLoading) {
-      return
-    }
-
+    if (!messageText.trim() || !model || isLoading) return
     setIsLoading(true)
     setError(null)
-
-    // Add user message
     const userMessage: Message = {
       role: 'user',
       content: messageText.trim(),
       timestamp: new Date()
     }
-
     setMessages(prev => [...prev, userMessage])
     setInput('')
 
     try {
-      // Enhanced prompt for short responses
-      const prompt = `You are an AI assistant for the Jharkhand CivicReport app - a Government of Jharkhand initiative for citizens to report civic issues using photos and AI analysis.
+      // Use last N messages for context
+      const historyLength = 6
+      const contextMessages = [...messages, userMessage].slice(-historyLength)
 
-IMPORTANT: Keep responses SHORT (1-3 sentences max). Be helpful but concise.
+      // Gemini API expects only 'user' and 'model', alternating
+      const geminiMessages = contextMessages
+        .filter(msg => msg.role === 'user' || msg.role === 'model')
+        .map(msg => ({
+          role: msg.role,
+          parts: [{ text: msg.content }]
+        }))
 
-User question: ${messageText}
+      // For first message, prepend instructions to the text
+      if (geminiMessages.length === 1) {
+        geminiMessages[0].parts[0].text =
+          `You are an expert Aviation Spotter AI for the Aviation Bay app. Only answer about aircraft, jets, aviation, jet spotting, airplane identification. Be concise and friendly.\n` +
+          geminiMessages[0].parts[0].text
+      }
 
-Respond briefly and directly:`
+      const result = await model.generateContent({
+        contents: geminiMessages
+      })
+      console.log("🔗 Gemini raw response:", result)
+      const candidate = result?.response?.candidates?.[0];
+      console.log("Gemini candidate:", candidate);
 
-      // Generate response
-      const result = await model.generateContent(prompt)
-      const response = await result.response
-      const text = response.text()
+      let aiContent = ""
+      if (candidate?.content?.parts?.[0]?.text) {
+        aiContent = candidate.content.parts[0].text
+      } else if (typeof candidate?.content === 'string') {
+        aiContent = candidate.content
+      } else if (candidate?.text) {
+        aiContent = candidate.text
+      }
+      if (!aiContent) {
+        console.log("Gemini candidate structure (no text found):", candidate)
+        aiContent = "Sorry, I didn't get a response. Try again or check the console for details."
+      }
 
       const assistantMessage: Message = {
         role: 'model',
-        content: text,
+        content: aiContent,
         timestamp: new Date()
       }
-
       setMessages(prev => [...prev, assistantMessage])
-
-    } catch (err: unknown) { // Fixed: Explicitly typed as unknown
-      console.error('❌ Error:', err)
-      
+    } catch (err: unknown) {
       let errorMessage = 'Sorry, please try again.'
-      
-      // Fixed: Proper error handling with type checking
       if (err instanceof Error) {
         if (err.message?.includes('quota') || err.message?.includes('limit')) {
           errorMessage = 'Too many requests. Wait a moment.'
@@ -115,15 +115,12 @@ Respond briefly and directly:`
           errorMessage = 'API setup issue.'
         }
       }
-
       const errorMsg: Message = {
         role: 'model',
         content: errorMessage,
         timestamp: new Date()
       }
-
       setMessages(prev => [...prev, errorMsg])
-
     } finally {
       setIsLoading(false)
     }
@@ -131,9 +128,7 @@ Respond briefly and directly:`
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (input.trim() && !isLoading) {
-      sendMessage(input.trim())
-    }
+    if (input.trim() && !isLoading) sendMessage(input.trim())
   }
 
   const clearChat = () => {
@@ -143,19 +138,16 @@ Respond briefly and directly:`
 
   return (
     <div className={`flex flex-col bg-white rounded-lg shadow-lg ${className}`}>
-      
-      {/* Simple Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">JH</span>
+          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+            <Plane className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold">Jharkhand Civic AI</h3>
+            <h3 className="font-semibold">Aviation Bay AI</h3>
             <p className="text-sm text-gray-500">{messages.length} messages</p>
           </div>
         </div>
-        
         <button
           onClick={clearChat}
           className="p-2 text-gray-500 hover:text-red-600 rounded"
@@ -165,63 +157,58 @@ Respond briefly and directly:`
         </button>
       </div>
 
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[300px] max-h-[400px]">
-        
-        {/* Welcome Message */}
         {messages.length === 0 && !error && (
           <div className="text-center py-8">
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <span className="text-orange-600 font-bold">JH</span>
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+              <Plane className="w-8 h-8 text-blue-500" />
             </div>
-            <h3 className="font-semibold mb-2">Jharkhand CivicReport AI</h3>
+            <h3 className="font-semibold mb-2">Aviation Spotter AI</h3>
             <p className="text-gray-600 text-sm mb-4">
-              Quick answers to your questions!
+              Ask about jet models, airplane types, or share your aviation curiosity!
             </p>
-            
-            {/* Simple starter questions */}
             <div className="space-y-2 max-w-sm mx-auto">
               <button
-                onClick={() => sendMessage('How does this app work?')}
-                className="w-full p-2 text-sm bg-orange-50 hover:bg-orange-100 rounded border"
-              >
-                How does this app work?
-              </button>
-              <button
-                onClick={() => sendMessage('What civic issues can I report?')}
+                onClick={() => sendMessage('How can I identify a jet from a photo?')}
                 className="w-full p-2 text-sm bg-blue-50 hover:bg-blue-100 rounded border"
               >
-                What can I report?
+                How do I spot a jet/aircraft model?
+              </button>
+              <button
+                onClick={() => sendMessage('What are some famous fighter jets?')}
+                className="w-full p-2 text-sm bg-sky-50 hover:bg-sky-100 rounded border"
+              >
+                What are famous jets?
+              </button>
+              <button
+                onClick={() => sendMessage('How do I tell a Boeing from an Airbus?')}
+                className="w-full p-2 text-sm bg-indigo-50 hover:bg-indigo-100 rounded border"
+              >
+                Boeing vs. Airbus differences
               </button>
             </div>
           </div>
         )}
 
-        {/* Error Display */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded p-3">
             <p className="text-red-700 text-sm">{error}</p>
           </div>
         )}
 
-        {/* Messages */}
         {messages.map((message, index) => (
           <div key={index} className={`flex gap-2 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
-            
-            {/* Avatar */}
             <div className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 ${
-              message.role === 'user' 
-                ? 'bg-blue-500' 
-                : 'bg-orange-500'
+              message.role === 'user'
+                ? 'bg-blue-500'
+                : 'bg-blue-500'
             }`}>
               {message.role === 'user' ? (
                 <User className="w-3 h-3 text-white" />
               ) : (
-                <span className="text-white text-xs font-bold">AI</span>
+                <Plane className="w-4 h-4 text-white" />
               )}
             </div>
-
-            {/* Message */}
             <div className={`flex-1 max-w-[80%] ${message.role === 'user' ? 'text-right' : ''}`}>
               <div className={`inline-block p-3 rounded-lg text-sm leading-relaxed ${
                 message.role === 'user'
@@ -239,11 +226,10 @@ Respond briefly and directly:`
           </div>
         ))}
 
-        {/* Loading */}
         {isLoading && (
           <div className="flex gap-2">
-            <div className="w-6 h-6 bg-orange-500 rounded flex items-center justify-center">
-              <span className="text-white text-xs font-bold">AI</span>
+            <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
+              <Plane className="w-4 h-4 text-white" />
             </div>
             <div className="bg-gray-100 rounded-lg p-3">
               <div className="flex items-center space-x-1">
@@ -259,31 +245,28 @@ Respond briefly and directly:`
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Simple Input */}
       <form onSubmit={handleSubmit} className="p-4 border-t">
         <div className="flex gap-2">
           <input
-            ref={inputRef} // Fixed: Now uses inputRef instead of textareaRef
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask me anything..."
+            placeholder="Ask anything about jets, airplanes..."
             disabled={isLoading || !model}
-            className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-100"
+            className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
             maxLength={200}
           />
-          
           <button
             type="submit"
             disabled={isLoading || !model || !input.trim()}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:bg-gray-400 transition-colors"
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 transition-colors"
           >
             <Send className="w-4 h-4" />
           </button>
         </div>
-        
         <div className="mt-2 text-xs text-gray-500 text-center">
-          {model ? '✅ Quick responses enabled' : '⏳ Connecting...'}
+          {model ? '✈️ Aviation AI ready' : '⏳ Connecting...'}
         </div>
       </form>
     </div>

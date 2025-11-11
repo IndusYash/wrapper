@@ -1,19 +1,32 @@
 import React from 'react';
 
+// For jet reports, you might use these statuses and priorities:
 export interface StatusBadgeProps {
-  status: "pending" | "acknowledged" | "in-progress" | "under-review" | "resolved" | "closed";
-  priority: "low" | "medium" | "high" | "urgent" | "emergency";
+  status:
+    | "pending"
+    | "reviewed"
+    | "approved"
+    | "rejected"
+    | "submitted"
+    | "spotted"
+    | "published";
+  priority: "low" | "medium" | "high" | "urgent";
 }
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status, priority }) => {
   const getStatusClasses = () => {
     switch (status) {
       case 'pending':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'in-progress':
+      case 'submitted':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'reviewed':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'resolved':
+      case 'approved':
+      case 'published':
+      case 'spotted':
         return 'bg-green-100 text-green-800 border-green-200';
+      case 'rejected':
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -26,10 +39,11 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, priority }) => {
       medium: 'bg-yellow-400',
       high: 'bg-orange-400',
       urgent: 'bg-red-500 animate-pulse',
-      emergency: 'bg-red-700 animate-pulse'
     }[priority];
 
-    return <span className={`w-2 h-2 rounded-full ${dotColor} mr-1`}></span>;
+    return (
+      <span className={`w-2 h-2 rounded-full ${dotColor} mr-1`}></span>
+    );
   };
 
   return (

@@ -68,7 +68,7 @@ const CameraCapture = ({ onImageCapture }: CameraCaptureProps) => {
         <div className="relative rounded-lg overflow-hidden shadow-md">
           <img 
             src={capturedPhoto} 
-            alt="Captured civic issue" 
+            alt="Captured jet" 
             className="w-full max-w-md mx-auto rounded-lg shadow-lg border border-gray-200"
           />
           <div className="absolute top-3 right-3 bg-green-500 text-white rounded-full p-2 shadow-lg">
@@ -99,7 +99,6 @@ const CameraCapture = ({ onImageCapture }: CameraCaptureProps) => {
             videoConstraints={videoConstraints}
             className="w-full max-w-lg mx-auto aspect-video"
           />
-          
           <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-4 px-4">
             <button
               onClick={switchCamera}
@@ -108,7 +107,6 @@ const CameraCapture = ({ onImageCapture }: CameraCaptureProps) => {
             >
               <RotateCcw className="w-5 h-5" />
             </button>
-            
             <button
               onClick={capturePhoto}
               className="bg-blue-500 text-white p-4 rounded-full hover:bg-blue-600 transition-all duration-200 shadow-xl transform hover:scale-110"
@@ -116,7 +114,6 @@ const CameraCapture = ({ onImageCapture }: CameraCaptureProps) => {
             >
               <Camera className="w-6 h-6" />
             </button>
-            
             <button
               onClick={toggleCamera}
               className="bg-black bg-opacity-60 backdrop-blur-sm text-white p-3 rounded-full hover:bg-opacity-80 transition-all duration-200 shadow-lg"
@@ -137,12 +134,11 @@ const CameraCapture = ({ onImageCapture }: CameraCaptureProps) => {
           <Camera className="w-16 h-16 mx-auto text-gray-400 group-hover:text-blue-500 mb-4 transition-colors duration-300" />
         </div>
         <h3 className="text-xl font-semibold text-gray-700 mb-2 group-hover:text-blue-600 transition-colors duration-300">
-          Capture or Upload Photo
+          Capture or Upload Jet Photo
         </h3>
         <p className="text-gray-500 mb-8 leading-relaxed">
-          Take a photo of civic issues like potholes, broken streetlights, or drainage problems
+          Take a photo of a jet to identify its model and log its location. Perfect for aviation enthusiasts.
         </p>
-        
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <button
             onClick={toggleCamera}
@@ -151,13 +147,11 @@ const CameraCapture = ({ onImageCapture }: CameraCaptureProps) => {
             <Camera className="w-5 h-5" />
             Open Camera
           </button>
-          
           <div className="flex items-center gap-2 text-gray-400">
             <div className="w-12 h-px bg-gray-300"></div>
             <span className="text-sm font-medium">or</span>
             <div className="w-12 h-px bg-gray-300"></div>
           </div>
-          
           <input
             ref={fileInputRef}
             type="file"
@@ -171,10 +165,9 @@ const CameraCapture = ({ onImageCapture }: CameraCaptureProps) => {
             className="flex items-center gap-3 px-8 py-4 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-all duration-200 cursor-pointer font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 min-w-[160px]"
           >
             <Upload className="w-5 h-5" />
-            Upload Photo
+            Upload Jet Photo
           </label>
         </div>
-        
         <div className="mt-6 flex items-center justify-center gap-2 text-xs text-gray-400">
           <div className="w-2 h-2 bg-green-400 rounded-full"></div>
           <span>JPEG, PNG, WebP supported • Max 5MB</span>

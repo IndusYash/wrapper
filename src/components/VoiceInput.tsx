@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { Mic, MicOff, Volume2, Waves, AlertTriangle } from 'lucide-react'
-import { VoiceInputProps } from '../types'
+
+// Local prop type (project's ../types does not export VoiceInputProps)
+interface VoiceInputProps {
+  onTranscript: (text: string) => void
+}
 
 // Declare global SpeechRecognition types
 declare global {

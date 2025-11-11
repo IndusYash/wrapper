@@ -1,10 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { DetectedIssue, GeminiResponse } from '../types'
-import { AI_ANALYSIS_PROMPT } from '../utils/constants'
+import { DetectedJet, GeminiJetResponse } from '../types' // Change types to aviation context!
+import { AI_JET_ANALYSIS_PROMPT } from '../utils/constants' // Update your prompt!
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY)
 
-export const analyzeImageWithGemini = async (imageDataUrl: string): Promise<DetectedIssue[]> => {
+export const analyzeImageWithGemini = async (imageDataUrl: string): Promise<DetectedJet[]> => {
   try {
     // Validate API key
     if (!import.meta.env.VITE_GEMINI_API_KEY) {
@@ -21,10 +21,9 @@ export const analyzeImageWithGemini = async (imageDataUrl: string): Promise<Dete
     const mimeTypeMatch = imageDataUrl.match(/data:([^;]+);/)
     const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'image/jpeg'
 
-    console.log('🔍 Sending image to Gemini AI for analysis...')
+    console.log('🔍 Sending jet image to Gemini AI for analysis...')
     console.log('📊 Image size:', Math.round(base64Data.length * 0.75 / 1024), 'KB')
-    
-    // Use Gemini 2.0 Flash model (same as your curl command)
+
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
     const imagePart = {
@@ -34,62 +33,61 @@ export const analyzeImageWithGemini = async (imageDataUrl: string): Promise<Dete
       }
     }
 
-    // Send request with timeout
-    const timeoutPromise = new Promise((_, reject) => 
+    const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Request timeout - please try again')), 30000)
     )
 
-    const analysisPromise = model.generateContent([AI_ANALYSIS_PROMPT, imagePart])
+    // Use aviation-specific prompt!
+    const analysisPromise = model.generateContent([AI_JET_ANALYSIS_PROMPT, imagePart])
 
     const result = await Promise.race([analysisPromise, timeoutPromise]) as any
     const response = await result.response
     const text = response.text()
 
-    console.log('✅ Gemini AI response received')
-    console.log('📝 Raw response:', text)
+    console.log('✅ Gemini AI jet response received')
+    console.log('📝 Raw jet response:', text)
 
     // Parse JSON response
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/)
       if (!jsonMatch) {
-        console.warn('⚠️ No JSON found in response, trying text extraction')
-        return extractIssuesFromText(text)
+        console.warn('⚠️ No JSON found in response, trying jet text extraction')
+        return extractJetsFromText(text)
       }
 
-      const parsedResponse: GeminiResponse = JSON.parse(jsonMatch[0])
-      
-      if (!parsedResponse.issues || !Array.isArray(parsedResponse.issues)) {
-        console.warn('⚠️ Invalid response format, trying text extraction')
-        return extractIssuesFromText(text)
+      const parsedResponse: GeminiJetResponse = JSON.parse(jsonMatch[0])
+      if (!parsedResponse.jets || !Array.isArray(parsedResponse.jets)) {
+        console.warn('⚠️ Invalid jet response format, trying text extraction')
+        return extractJetsFromText(text)
       }
 
-      // Validate and filter issues
-      const validIssues = parsedResponse.issues
-        .filter(issue => 
-          issue.category && 
-          typeof issue.confidence === 'number' && 
-          issue.description &&
-          issue.confidence >= 0.3
+      // Validate and filter jets
+      const validJets = parsedResponse.jets
+        .filter(jet =>
+          jet.jetType &&
+          typeof jet.confidence === 'number' &&
+          jet.description &&
+          jet.confidence >= 0.3
         )
-        .map(issue => ({
-          ...issue,
-          category: normalizeCategory(issue.category),
-          confidence: Math.min(issue.confidence, 1.0),
-          description: issue.description.trim()
+        .map(jet => ({
+          ...jet,
+          jetType: normalizeJetType(jet.jetType),
+          confidence: Math.min(jet.confidence, 1.0),
+          description: jet.description.trim()
         }))
 
-      console.log('🎯 Detected issues:', validIssues)
-      return validIssues
+      console.log('🎯 Detected jets:', validJets)
+      return validJets
 
     } catch (parseError) {
-      console.error('❌ Error parsing Gemini response:', parseError)
-      console.log('🔄 Falling back to text extraction')
-      return extractIssuesFromText(text)
+      console.error('❌ Error parsing Gemini jet response:', parseError)
+      console.log('🔄 Falling back to jet text extraction')
+      return extractJetsFromText(text)
     }
 
   } catch (error: any) {
     console.error('❌ Error calling Gemini API:', error)
-    
+
     if (error.message?.includes('API key')) {
       throw new Error('Invalid API key. Please check your Gemini API configuration.')
     }
@@ -99,119 +97,96 @@ export const analyzeImageWithGemini = async (imageDataUrl: string): Promise<Dete
     if (error.message?.includes('timeout')) {
       throw new Error('Request timeout. Please try again with a smaller image.')
     }
-    
-    throw new Error('Failed to analyze image. Please try again.')
+
+    throw new Error('Failed to analyze jet image. Please try again.')
   }
 }
 
-// Normalize category names to match predefined categories
-const normalizeCategory = (category: string): string => {
-  const normalized = category.toLowerCase().trim()
-  
-  const categoryMap: Record<string, string> = {
-    'pothole': 'pothole',
-    'potholes': 'pothole',
-    'road damage': 'pothole',
-    'road': 'pothole',
-    'hole': 'pothole',
-    'crack': 'pothole',
-    'street light': 'streetlight',
-    'streetlight': 'streetlight',
-    'street lights': 'streetlight',
-    'streetlights': 'streetlight',
-    'light': 'streetlight',
-    'lighting': 'streetlight',
-    'lamp': 'streetlight',
-    'broken light': 'streetlight',
-    'drainage': 'drainage',
-    'drain': 'drainage',
-    'water': 'drainage',
-    'waterlog': 'drainage',
-    'waterlogging': 'drainage',
-    'flood': 'drainage',
-    'flooding': 'drainage',
-    'sewer': 'drainage',
-    'garbage': 'garbage',
-    'trash': 'garbage',
-    'waste': 'garbage',
-    'litter': 'garbage',
-    'bin': 'garbage',
-    'dustbin': 'garbage',
-    'rubbish': 'garbage',
-    'traffic': 'traffic',
-    'traffic sign': 'traffic',
-    'sign': 'traffic',
-    'signal': 'traffic',
-    'signage': 'traffic',
-    'construction': 'construction',
-    'debris': 'construction',
-    'barrier': 'construction',
-    'work': 'construction',
-    'repair': 'construction'
+// Normalize jet type names to match predefined categories
+const normalizeJetType = (jetType: string): string => {
+  const normalized = jetType.toLowerCase().trim()
+
+  // Standard aviation types; add more as you expand!
+  const jetTypeMap: Record<string, string> = {
+    'fighter': 'fighter jet',
+    'f16': 'fighter jet',
+    'mig': 'fighter jet',
+    'rafale': 'fighter jet',
+    'hornet': 'fighter jet',
+    'airbus': 'commercial airliner',
+    'boeing': 'commercial airliner',
+    'a320': 'commercial airliner',
+    '737': 'commercial airliner',
+    'passenger': 'commercial airliner',
+    'helicopter': 'helicopter',
+    'chopper': 'helicopter',
+    'apache': 'helicopter',
+    'bell': 'helicopter',
+    'drone': 'drone',
+    'uav': 'drone',
+    'quadcopter': 'drone',
+    'cargo': 'cargo aircraft',
+    'freighter': 'cargo aircraft'
   }
-  
-  return categoryMap[normalized] || normalized
+
+  return jetTypeMap[normalized] || normalized
 }
 
-// Fallback function to extract issues from text
-const extractIssuesFromText = (text: string): DetectedIssue[] => {
-  console.log('🔄 Extracting issues from text response')
-  
-  const issues: DetectedIssue[] = []
+// Fallback function to extract jets from text (for basic identification)
+const extractJetsFromText = (text: string): DetectedJet[] => {
+  console.log('🔄 Extracting jets from text response')
+
+  const jets: DetectedJet[] = []
   const textLower = text.toLowerCase()
-  
-  const keywords = [
-    { 
-      category: 'pothole', 
-      terms: ['pothole', 'road damage', 'crack', 'hole', 'asphalt', 'pavement'],
-      confidence: 0.7
-    },
-    { 
-      category: 'streetlight', 
-      terms: ['street light', 'lamp', 'lighting', 'broken light', 'light post'],
-      confidence: 0.7
-    },
-    { 
-      category: 'drainage', 
-      terms: ['drain', 'water', 'flood', 'waterlog', 'sewer', 'gutter'],
-      confidence: 0.6
-    },
-    { 
-      category: 'garbage', 
-      terms: ['garbage', 'trash', 'waste', 'litter', 'bin', 'dustbin'],
+
+  // Static aviation keywords; extend as needed!
+  const jetKeywords = [
+    {
+      jetType: 'fighter jet',
+      terms: ['fighter', 'f16', 'mig', 'rafale', 'hornet', 'combat'],
       confidence: 0.8
     },
-    { 
-      category: 'traffic', 
-      terms: ['traffic sign', 'sign', 'signal', 'signage', 'board'],
-      confidence: 0.6
+    {
+      jetType: 'commercial airliner',
+      terms: ['airbus', 'boeing', 'passenger', 'a320', '737'],
+      confidence: 0.8
     },
-    { 
-      category: 'construction', 
-      terms: ['construction', 'debris', 'barrier', 'work', 'repair'],
-      confidence: 0.5
+    {
+      jetType: 'helicopter',
+      terms: ['helicopter', 'chopper', 'bell', 'apache', 'rotor'],
+      confidence: 0.75
+    },
+    {
+      jetType: 'drone',
+      terms: ['drone', 'uav', 'quadcopter'],
+      confidence: 0.7
+    },
+    {
+      jetType: 'cargo aircraft',
+      terms: ['cargo', 'freighter', 'goods', 'transport'],
+      confidence: 0.65
     }
   ]
 
-  keywords.forEach(({ category, terms, confidence }) => {
+  jetKeywords.forEach(({ jetType, terms, confidence }) => {
     const foundTerms = terms.filter(term => textLower.includes(term))
     if (foundTerms.length > 0) {
-      const adjustedConfidence = Math.min(confidence + (foundTerms.length - 1) * 0.1, 0.95)
-      
-      issues.push({
-        category,
+      const adjustedConfidence = Math.min(confidence + (foundTerms.length - 1) * 0.1, 0.98)
+
+      jets.push({
+        jetType,
         confidence: adjustedConfidence,
-        description: `Detected ${category} issue based on AI analysis (found: ${foundTerms.join(', ')})`
+        description: `Detected ${jetType} based on AI analysis (found: ${foundTerms.join(', ')})`
       })
     }
   })
 
-  const uniqueIssues = issues.filter((issue, index, self) => 
-    index === self.findIndex(i => i.category === issue.category)
+  const uniqueJets = jets.filter((jet, index, self) =>
+    index === self.findIndex(j => j.jetType === jet.jetType)
   )
 
-  console.log('📋 Extracted issues from text:', uniqueIssues)
-  return uniqueIssues
+  console.log('📋 Extracted jets from text:', uniqueJets)
+  return uniqueJets
 }
 
 // Test API connection
@@ -226,7 +201,7 @@ export const testGeminiConnection = async (): Promise<boolean> => {
     const result = await model.generateContent('Hello, please respond with "OK" if you can see this message.')
     const response = await result.response
     const text = response.text()
-    
+
     console.log('🔗 Gemini API test response:', text)
     return text.toLowerCase().includes('ok')
   } catch (error) {
